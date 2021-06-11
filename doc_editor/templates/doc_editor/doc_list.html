@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doc list</title>
+    {% load static %}
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="{% static 'doc_editor/css/my.css' %}">
+
+    <style>
+        #doc_list_dv {
+            max-height: 500px;
+            overflow: auto;
+        }
+        #editor_dv{
+            display: none;
+        }
+
+        /* style for table style */
+        .tab_le{
+            width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 0 10px #ccc;
+        }
+        .tab_le thead tr th{
+            background-color: #1b2177;
+            padding: 10px;
+            text-align: center;
+            color: #fff;
+        }
+        .tab_le thead tr th:first-child{
+            border-top-left-radius: 10px;
+        }
+        .tab_le thead tr th:last-child{
+            border-top-right-radius: 10px;
+        }
+        .tab_le tbody tr:nth-child(even){
+            background-color: rgba(0,0,0,.05);
+        }
+        .tab_le tbody tr td{
+            text-align: center; padding: 12px 0; color: #000;
+        }
+        .tab_le tbody tr:last-child td:first-child{
+            border-bottom-left-radius: 10px;
+        }
+        .tab_le tbody tr:last-child td:last-child{
+            border-bottom-right-radius: 10px;
+        }
+        /* Data table pagination style */
+        .dataTables_wrapper .dataTables_paginate .paginate_button{
+            padding: 0px 10px;
+        }
+
+        /* loader Logo */
+        #loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: 5000;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            place-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="navi_gatioin">
+        <div class="row">
+            <div class="col-md-3 text-left pl-5">
+                <a href="#" style="color: black;"><i class="fa fa-pencil-square-o" style="font-size: 40px"></i></a>
+            </div>
+            <div class="col-md-9">
+                <div id="navi_gatioin">
+                    <a href="/" id="hom" class="bor_btn">Home<span></span><span></span></a>
+                    <a href="/doc_list" id="doc_list" class="bor_btn active">Document list<span></span><span></span></a>
+                    <a href="#work" id="wor" class="bor_btn">Work<span></span><span></span></a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="page1 super_center block_bg" id="home">
+        <div class="row w-100 justify-content-center">
+            <div class="col-md-8" id="doc_list_dv">
+                <table id="text_tbl" class="tab_le">
+                    <thead class="t_head">
+                        <tr>
+                            <th>id</th>
+                            <th>title</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for i in data %}
+                            <tr>
+                                <td>{{ i.id }}</td>
+                                <td>{{ i.title }}</td>
+                                <td><a href="get_text_data/{{ i.id }}">Edit</a></td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="super_center" id="loader">
+        <i class="fa fa-spinner fa-spin text-white" style="font-size:50px"></i>
+    </div>
+
+    <script src="{% static 'doc_editor/js/jquery.min.js' %}"></script>
+    <script src="https://cdn.ckeditor.com/ckeditor5/28.0.0/classic/ckeditor.js"></script>
+
+    <script>
+        $(document).on('ready', async() => {
+
+            // Loader hourglass show
+            function loaderShow() {
+                $('#loader').css('display', 'grid')
+            }
+
+            // Loader hourglass hide
+            function loaderHide() {
+                $('#loader').css('display', 'none')
+            }
+
+            // Function for get post data from API
+            let get_post = async (url, body, head=false) => {
+                loaderShow();
+                let promise = new Promise((resolve, reject) => {
+                    if (head){
+                        fetch(url, {method: 'post', headers: { 'Accept': 'application/json' }, body: body}).then(response => response.ok ? resolve(response.json()) : reject(new Error('Got some error to get record.')));
+                    } else{
+                        fetch(url, {method: 'post', body: body}).then(response => response.ok ? resolve(response.json()) : reject(new Error('Got some error to get record.')));
+                    }
+                }).catch(alert);
+                let resp = await promise;
+                resp.message ? Swal.fire({ icon: resp.msg_typ, text: resp.message }) : '';
+                return resp;
+            }
+
+            let get_data = async () => {
+                let data = await get_post('get_text_data', JSON.stringify({}));
+                console.log(data);
+            };
+            {#get_data();#}
+        });
+    </script>
+</body>
+</html>

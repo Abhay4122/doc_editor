@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doc editor</title>
+    {% load static %}
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="{% static 'doc_editor/css/my.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/10.16.6/sweetalert2.min.css" integrity="sha512-/D4S05MnQx/q7V0+15CCVZIeJcV+Z+ejL1ZgkAcXE1KZxTE4cYDvu+Fz+cQO9GopKrDzMNNgGK+dbuqza54jgw==" crossorigin="anonymous" referrerpolicy="no-referrer"/>
+
+    <style>
+        .ck-editor__editable_inline {
+            height: 400px;
+        }
+        #editor_dv{
+            display: none;
+        }
+
+        /* loader Logo */
+        #loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: 5000;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            place-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="navi_gatioin">
+        <div class="row">
+            <div class="col-md-3 text-left pl-5">
+                <a href="#" style="color: black;"><i class="fa fa-pencil-square-o" style="font-size: 40px"></i></a>
+            </div>
+            <div class="col-md-9">
+                <div id="navi_gatioin">
+                    <a href="/" id="hom" class="bor_btn active">Home<span></span><span></span></a>
+                    <a href="/doc_list" id="doc_list" class="bor_btn">Document list<span></span><span></span></a>
+                    <a href="#work" id="wor" class="bor_btn">Work<span></span><span></span></a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="page1 super_center block_bg" id="home">
+        <div class="row w-100 justify-content-center" id="main_dv">
+            <div class="col-lg-5">
+                <h1 class="font-2 display-2 font-weight-bold">Hi,</h1>
+                <h1 class="font-2 mt-4">Welcome to text editor</h1>
+                <div class="type-wrap">
+                    <div id="typed-strings">
+                        <p>Create the text file...</p>
+                        <p>Edit before create the file...</p>
+                        <p>Save your created file...</p>
+                        <p>Create your document history...</p>
+                    </div>
+                    <span id="typed" style="white-space:pre;"></span>
+                </div>
+            </div>
+            <div class="col-md-5 super_center">
+                <button class="btn_riple" id="explore_btn">Explore</button>
+            </div>
+        </div>
+        <div class="row w-100 justify-content-center" id="editor_dv">
+            <form id="text_form">
+                {% csrf_token %}
+                <input type="hidden" id="id">
+                <div class="col-md-6 mb-2">
+                    <input type="text" id="title" class="form-control" placeholder="Title...">
+                </div>
+                <div class="col-lg-12">
+                    <textarea id="editor">
+
+                    </textarea>
+                </div>
+                <div class="col-12 text-right">
+                    <button class="btn_riple">Submit</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="super_center" id="loader">
+        <i class="fa fa-spinner fa-spin text-white" style="font-size:50px"></i>
+    </div>
+
+    <script src="{% static 'doc_editor/js/auto-type/typed.js' %}"></script>
+    <script src="{% static 'doc_editor/js/jquery.min.js' %}"></script>
+    <script src="https://cdn.ckeditor.com/ckeditor5/28.0.0/classic/ckeditor.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/10.16.6/sweetalert2.min.js" integrity="sha512-CrNI25BFwyQ47q3MiZbfATg0ZoG6zuNh2ANn/WjyqvN4ShWfwPeoCOi9pjmX4DoNioMQ5gPcphKKF+oVz3UjRw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <script>
+        let edit_or;
+
+        $(document).on('ready', async() => {
+            $('#explore_btn').on('click', () => {
+                $('#main_dv').hide();
+                $('#editor_dv').show();
+                editor();
+            });
+
+            // Loader hourglass show
+            function loaderShow() {
+                $('#loader').css('display', 'grid')
+            }
+
+            // Loader hourglass hide
+            function loaderHide() {
+                $('#loader').css('display', 'none')
+            }
+
+            // Function for get post data from API
+            let get_post = async (url, body, head=false) => {
+                loaderShow();
+                let promise = new Promise((resolve, reject) => {
+                    if (head){
+                        fetch(url, {method: 'post', headers: { 'Accept': 'application/json' }, body: body}).then(response => response.ok ? resolve(response.json()) : reject(new Error('Got some error to get record.')));
+                    } else{
+                        fetch(url, {method: 'post', body: body}).then(response => response.ok ? resolve(response.json()) : reject(new Error('Got some error to get record.')));
+                    }
+                }).catch(alert);
+                let resp = await promise;
+                resp.message ? Swal.fire({ icon: resp.msg_typ, text: resp.message }) : '';
+                return resp;
+            }
+
+            $('#text_form').on('submit', async(e) => {
+                e.preventDefault();
+                let formdata = new FormData();
+
+                formdata.append('id', $('#id').val());
+                formdata.append('title', $('#title').val());
+                formdata.append('body', edit_or.getData());
+                formdata.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                await get_post('/text_data_post', formdata, true);
+                loaderHide();
+                window.location.href = '/doc_list'
+            });
+
+            if('{{ data }}'){
+                $('#id').val('{{ data.0.id }}');
+                $('#title').val('{{ data.0.title }}');
+                $('#editor').val('{{ data.0.text|safe }}');
+                $('#explore_btn').trigger('click');
+            }
+        });
+
+        let editor = async () => {
+            ClassicEditor.create(
+                document.querySelector( '#editor' ),
+                //{
+                //    plugins: [ ExportWord ],
+                //    converterUrl: 'https://docx-converter.cke-cs.com/v1/convert',
+                //    exportWord: {
+                //        fileName: 'my-file.docx',
+                //        converterOptions: {
+                //            format: 'A4', // Default value, you don't need to specify it explicitly for A4.
+                //            margin_top: '20mm',
+                //            margin_bottom: '20mm',
+                //            margin_right: '12mm',
+                //            margin_left: '12mm'
+                //        }
+                //    }
+                //}
+            ).then(
+                newEditor => {edit_or = newEditor}
+            ).catch(
+                error => {console.error(error)}
+            )
+        }
+
+        window.onbeforeunload = function () {
+            window.scrollTo(0, 0);
+        }
+
+        // Auto type text
+
+        document.addEventListener('DOMContentLoaded', function () {
+            var typed = new Typed('#typed', {
+                stringsElement: '#typed-strings',
+                typeSpeed: 100,
+                backSpeed: 20,
+                startDelay: 1000,
+                loop: true,
+                loopCount: Infinity
+            });
+        });
+
+        // Active buttton and onclick smooth scrolling
+
+        {% comment %}document.querySelectorAll('.bor_btn').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelectorAll('.bor_btn').forEach(a => {
+                    a.classList.remove('active');
+                });
+                this.classList.add('active');
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });{% endcomment %}
+
+        // Active button on scroll page
+
+        {% comment %}window.onscroll = function(){
+            let scroltop = document.documentElement.scrollTop + (window.innerHeight / 2);
+            let win_height = window.innerHeight;
+
+            if (scroltop > win_height & scroltop < (win_height * 2)){
+                document.querySelectorAll('.bor_btn').forEach(a => {
+                    a.classList.remove('active');
+                });
+                document.getElementById('abo').classList.add('active');
+            } else if (scroltop > (win_height * 2)){
+                document.querySelectorAll('.bor_btn').forEach(a => {
+                    a.classList.remove('active');
+                });
+                document.getElementById('wor').classList.add('active');
+            } else {
+                document.querySelectorAll('.bor_btn').forEach(a => {
+                    a.classList.remove('active');
+                });
+                document.getElementById('hom').classList.add('active');
+            }
+
+            if (document.documentElement.scrollTop > win_height){
+                document.getElementById('navi_gatioin').style.backgroundColor = 'black';
+            } else {
+                document.getElementById('navi_gatioin').style.backgroundColor = 'transparent';
+            }
+        }{% endcomment %}
+    </script>
+</body>
+</html>
